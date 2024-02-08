@@ -1,1 +1,1 @@
-# basic_algorithms_and_data_structures_in_rust
+# Basic algorithms & Data Structures in Rust
