@@ -1,1 +1,12 @@
 # Basic algorithms & Data Structures in Rust
+- Algorithms:
+  - Sort:
+    - Bubble Sort
+    - Selection Sort
+    - Merge Sort
+    - Quick Sort
+- Data Structure
+  - Collections
+    - Linked List
+    - Stack
+    - Queue
