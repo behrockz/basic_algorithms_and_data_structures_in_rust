@@ -1,14 +1,17 @@
+use std::fmt::Display;
+use crate::collections::list::{List, QueueStackMix};
+
 struct BSTNode<T> where T : PartialOrd {
     value: T,
     smaller: Option<Box<BSTNode<T>>>,
     larger: Option<Box<BSTNode<T>>>,
 }
 
-struct BinarySearchTree<T>  where T : PartialOrd {
+struct BinarySearchTree<T>  where T : PartialOrd + Display {
     root: Option<Box<BSTNode<T>>>,
 }
 
-impl<T> BinarySearchTree<T> where T : PartialOrd {
+impl<T> BinarySearchTree<T> where T : PartialOrd + Display {
     fn new() -> Self {
         BinarySearchTree {
             root: None,
@@ -50,7 +53,7 @@ impl<T> BinarySearchTree<T> where T : PartialOrd {
         }
     }
 
-    fn search(&self, value: T) -> Result<(),()> {
+    pub fn search(&self, value: T) -> Result<(),()> {
         if self.root.is_none() {
             return Err(());
         }
@@ -72,7 +75,47 @@ impl<T> BinarySearchTree<T> where T : PartialOrd {
             return Self::internal_search(node.larger.as_ref().unwrap(), value);
         }
     }
+
+    pub fn dfs_print(&self) {
+        Self::dfs(&self.root);
+    }
+    fn dfs(node: &Option<Box<BSTNode<T>>>) {
+        if node.is_none() {
+            return;
+        }
+
+        node.as_ref().map(|n| {
+            Self::dfs(&n.smaller);
+            println!("{}", n.value);
+            Self::dfs(&n.larger);
+        });
+    }
+
+    pub fn bfs_print(&self) {
+        if self.root.is_none() {
+            return;
+        }
+
+        let mut l = List::<&Option<Box<BSTNode<T>>>>::new();
+        l.push_to_end(&self.root).unwrap();
+        loop {
+            match l.pop_from_beginning() {
+                None => return,
+                Some(n) => {
+                    if n.is_none() {
+                        continue;
+                    }
+                    let node = n.as_ref().unwrap();
+                    println!("{}", node.value);
+                    l.push_to_end(&node.smaller).unwrap();
+                    l.push_to_end(&node.larger).unwrap();
+                }
+            }
+        }
+    }
 }
+
+
 
 
 #[cfg(test)]
@@ -82,17 +125,7 @@ mod tests {
 
     #[test]
     fn add_test() {
-        let mut bst = BinarySearchTree::new();
-        assert_eq!(bst.add(5), Ok(()));
-        assert_eq!(bst.add(7), Ok(()));
-        assert_eq!(bst.add(2), Ok(()));
-        assert_eq!(bst.add(8), Ok(()));
-        assert_eq!(bst.add(1), Ok(()));
-        assert_eq!(bst.add(6), Ok(()));
-        assert_eq!(bst.add(3), Ok(()));
-        assert_eq!(bst.add(4), Ok(()));
-        assert_eq!(bst.add(9), Ok(()));
-        assert_eq!(bst.add(10), Ok(()));
+        let bst = create_tree();
 
         assert_eq!(bst.search(5), Ok(()));
         assert_eq!(bst.search(6), Ok(()));
@@ -108,5 +141,32 @@ mod tests {
         assert_eq!(bst.search(5), Ok(()));
         assert_eq!(bst.search(10), Ok(()));
         assert_eq!(bst.search(20), Err(()));
+    }
+
+    #[test]
+    fn test_dfs() {
+        let bst = create_tree();
+        bst.dfs_print();
+    }
+
+    #[test]
+    fn test_bfs() {
+        let bst = create_tree();
+        bst.bfs_print();
+    }
+
+    fn create_tree() -> BinarySearchTree<i32> {
+        let mut bst = BinarySearchTree::new();
+        assert_eq!(bst.add(5), Ok(()));
+        assert_eq!(bst.add(7), Ok(()));
+        assert_eq!(bst.add(2), Ok(()));
+        assert_eq!(bst.add(8), Ok(()));
+        assert_eq!(bst.add(1), Ok(()));
+        assert_eq!(bst.add(6), Ok(()));
+        assert_eq!(bst.add(3), Ok(()));
+        assert_eq!(bst.add(4), Ok(()));
+        assert_eq!(bst.add(9), Ok(()));
+        assert_eq!(bst.add(10), Ok(()));
+        bst
     }
 }

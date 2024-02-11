@@ -9,7 +9,7 @@ pub struct List<T> {
 }
 
 impl<T> List<T> {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         List {
             head: None,
             length: 0,
@@ -20,7 +20,7 @@ impl<T> List<T> {
         IntoIter(self)
     }
 
-    fn get_length(&self) -> usize {
+    pub fn get_length(&self) -> usize {
         self.length
     }
 
