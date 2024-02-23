@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::collections::list::{List, QueueStackMix};
+use crate::collections::linked_list::{List, QueueStackMix};
 
 struct BSTNode<T> where T : PartialOrd {
     value: T,

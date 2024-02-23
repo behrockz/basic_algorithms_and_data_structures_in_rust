@@ -16,10 +16,6 @@ impl<T> List<T> {
         }
     }
 
-    fn into_iter(self) -> IntoIter<T> {
-        IntoIter(self)
-    }
-
     pub fn get_length(&self) -> usize {
         self.length
     }
@@ -177,6 +173,11 @@ impl<T> Drop for List<T> {
 
 struct IntoIter<T>(List<T>);
 
+impl<T> List<T> {
+    fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
+    }
+}
 impl<T> Iterator for IntoIter<T> {
     type Item = T;
 
@@ -184,6 +185,49 @@ impl<T> Iterator for IntoIter<T> {
         self.0.pop_from_beginning()
     }
 }
+
+pub struct Iter<'a, T> {
+    next: Option<&'a Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter<'a>(&'a self) -> Iter<'a, T> {
+        Iter { next: self.head.as_deref() }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_deref();
+            &node.value
+        })
+    }
+}
+
+pub struct IterMut<'a, T> {
+    next: Option<&'a mut Node<T>>,
+}
+
+impl<T> List<T> {
+    pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a, T> {
+        IterMut { next: self.head.as_deref_mut() }
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_deref_mut();
+            &node.value
+        })
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -300,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn iter() {
+    fn into_iter() {
         let mut l: List<u32> = List::new();
         assert!(l.push_to_beginning(2).is_ok());
         assert!(l.push_to_beginning(1).is_ok());
@@ -309,6 +353,40 @@ mod tests {
         assert!(l.insert_by_index(2, 3).is_ok());
 
         assert_eq!(l.into_iter().sum::<u32>(), 15);
+    }
+
+    #[test]
+    fn iter() {
+        let mut l: List<u32> = List::new();
+        assert!(l.push_to_beginning(2).is_ok());
+        assert!(l.push_to_beginning(1).is_ok());
+        assert!(l.push_to_end(4).is_ok());
+        assert!(l.push_to_end(5).is_ok());
+        assert!(l.insert_by_index(2, 3).is_ok());
+
+        let mut iter = l.iter();
+        for i in 1..6 {
+            assert_eq!(iter.next().unwrap(), &i);
+        }
+        assert!(iter.next.is_none());
+        assert_eq!(l.iter().sum::<u32>(), 15);
+    }
+
+    #[test]
+    fn iter_mut() {
+        let mut l: List<u32> = List::new();
+        assert!(l.push_to_beginning(2).is_ok());
+        assert!(l.push_to_beginning(1).is_ok());
+        assert!(l.push_to_end(4).is_ok());
+        assert!(l.push_to_end(5).is_ok());
+        assert!(l.insert_by_index(2, 3).is_ok());
+
+        let mut iter = l.iter_mut();
+        for i in 1..6 {
+            assert_eq!(iter.next().unwrap(), &i);
+        }
+        assert!(iter.next.is_none());
+        assert_eq!(l.iter_mut().sum::<u32>(), 15);
     }
 
     #[test]

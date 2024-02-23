@@ -8,5 +8,6 @@
 - Data Structure
   - Collections
     - Linked List
-    - Stack
+    - Doubly Linked List
+    - Stack~~~~
     - Queue
