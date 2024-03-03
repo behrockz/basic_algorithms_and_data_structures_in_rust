@@ -95,12 +95,12 @@ impl<T> DoublyLinkedList<T> {
         self.length += 1;
         Ok(())
     }
-    fn get_by_index(&mut self, index: i32) -> Link<T> {
+    fn get_by_index(&mut self, index: i32) -> Option<T> {
         if index > self.length as i32 || (index * -1) > (self.length + 1) as i32 {
             return None;
         }
 
-        let mut result : Link<T> = None;
+        let mut result = None;
 
         if index == 0 || index == (-1 * self.length as i32) {
             if self.head.is_none() {
@@ -114,7 +114,7 @@ impl<T> DoublyLinkedList<T> {
                         self.tail = None;
                     }
 
-                    result = Some(old_head);
+                    result = Some(Rc::try_unwrap(old_head).ok().unwrap().into_inner().value);
                 });
             }
         } else if index == -1 || index == self.length as i32 {
@@ -129,7 +129,7 @@ impl<T> DoublyLinkedList<T> {
                         self.head = None;
                     }
 
-                    result = Some(old_tail);
+                    result = Some(Rc::try_unwrap(old_tail).ok().unwrap().into_inner().value);
                 });
             }
         } else if index >= 1 {
@@ -141,7 +141,7 @@ impl<T> DoublyLinkedList<T> {
                 n.borrow().previous.clone().unwrap().borrow_mut().next = n.borrow().next.clone();
                 n.borrow().next.clone().unwrap().borrow_mut().previous = n.borrow().previous.clone();
 
-                result = Some(n);
+                result = Some(Rc::try_unwrap(n).ok().unwrap().into_inner().value);
             });
         } else if index < 0 {
             let mut iter = self.tail.clone();
@@ -152,21 +152,22 @@ impl<T> DoublyLinkedList<T> {
                 n.borrow().previous.clone().unwrap().borrow_mut().next = n.borrow().next.clone();
                 n.borrow().next.clone().unwrap().borrow_mut().previous = n.borrow().previous.clone();
 
-                result = Some(n);
+                result = Some(Rc::try_unwrap(n).ok().unwrap().into_inner().value);
             });
         }
 
         if result.is_some() {
             self.length -= 1;
         }
+
         result
     }
 
-    fn get_first(&mut self) -> Link<T> {
+    fn get_first(&mut self) -> Option<T> {
         self.get_by_index(0)
     }
 
-    fn get_last(&mut self) -> Link<T> {
+    fn get_last(&mut self) -> Option<T> {
         self.get_by_index(-1)
     }
 
@@ -218,20 +219,20 @@ mod tests {
 
         assert_eq!(list.get_length(), 8);
 
-        assert_eq!(list.get_by_index(0).unwrap().borrow().value, 1);
-        assert_eq!(list.get_by_index(1).unwrap().borrow().value, 3);
-        assert_eq!(list.get_first().unwrap().borrow().value, 2);
+        assert_eq!(list.get_by_index(0).unwrap(), 1);
+        assert_eq!(list.get_by_index(1).unwrap(), 3);
+        assert_eq!(list.get_first().unwrap(), 2);
 
         assert_eq!(list.get_length(), 5);
 
-        assert_eq!(list.get_by_index(-1).unwrap().borrow().value, 8);
-        assert_eq!(list.get_by_index(-2).unwrap().borrow().value, 6);
+        assert_eq!(list.get_by_index(-1).unwrap(), 8);
+        assert_eq!(list.get_by_index(-2).unwrap(), 6);
 
         assert_eq!(list.get_length(), 3);
 
-        assert_eq!(list.get_by_index(-3).unwrap().borrow().value, 4);
-        assert_eq!(list.get_by_index(2).unwrap().borrow().value, 7);
-        assert_eq!(list.get_by_index(0).unwrap().borrow().value, 5);
+        assert_eq!(list.get_by_index(-3).unwrap(), 4);
+        assert_eq!(list.get_by_index(2).unwrap(), 7);
+        assert_eq!(list.get_by_index(0).unwrap(), 5);
 
         assert_eq!(list.get_length(), 0);
 
@@ -262,18 +263,18 @@ mod tests {
         assert_eq!(list.insert_by_index(-19, 8), Err(()));
         assert_eq!(list.insert_by_index(19, 8), Err(()));
 
-        assert_eq!(list.get_first().unwrap().borrow().value, -2);
-        assert_eq!(list.get_first().unwrap().borrow().value, -1);
-        assert_eq!(list.get_last().unwrap().borrow().value, 8);
-        assert_eq!(list.get_last().unwrap().borrow().value, 7);
+        assert_eq!(list.get_first().unwrap(), -2);
+        assert_eq!(list.get_first().unwrap(), -1);
+        assert_eq!(list.get_last().unwrap(), 8);
+        assert_eq!(list.get_last().unwrap(), 7);
 
-        assert_eq!(list.get_by_index(-7).unwrap().borrow().value, 0);
-        assert_eq!(list.get_by_index(6).unwrap().borrow().value, 6);
+        assert_eq!(list.get_by_index(-7).unwrap(), 0);
+        assert_eq!(list.get_by_index(6).unwrap(), 6);
 
-        assert_eq!(list.get_by_index(2).unwrap().borrow().value, 3);
-        assert_eq!(list.get_by_index(-3).unwrap().borrow().value, 2);
-        assert_eq!(list.get_by_index(1).unwrap().borrow().value, 4);
-        assert_eq!(list.get_by_index(-2).unwrap().borrow().value, 1);
-        assert_eq!(list.get_by_index(0).unwrap().borrow().value, 5);
+        assert_eq!(list.get_by_index(2).unwrap(), 3);
+        assert_eq!(list.get_by_index(-3).unwrap(), 2);
+        assert_eq!(list.get_by_index(1).unwrap(), 4);
+        assert_eq!(list.get_by_index(-2).unwrap(), 1);
+        assert_eq!(list.get_by_index(0).unwrap(), 5);
     }
 }
