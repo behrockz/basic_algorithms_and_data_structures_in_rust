@@ -182,15 +182,7 @@ impl<T> DoublyLinkedList<T> {
 
 impl<T> Drop for DoublyLinkedList<T> {
     fn drop(&mut self) {
-        let mut iter = self.head.take();
-        self.tail.take();
-
-        while let Some(i) = iter {
-            i.borrow_mut().previous.take();
-            iter = i.borrow_mut().next.take();
-            drop(i);
-        }
-
+        while self.get_first().is_some() {}
     }
 }
 
