@@ -4,18 +4,18 @@ use rand::prelude::*;
 
 
 #[derive(Debug)]
-struct PatriciaNode {
-    left_child: Option<Box<PatriciaNode>>,
-    right_child: Option<Box<PatriciaNode>>,
+struct LoopyPatriciaNode {
+    left_child: Option<Box<LoopyPatriciaNode>>,
+    right_child: Option<Box<LoopyPatriciaNode>>,
     key: BitVec<u8>,
     end: bool
 }
 
-impl PatriciaNode {
+impl LoopyPatriciaNode {
     fn new(key: &BitSlice<u8>, end: bool) -> Self {
         let mut new_key = BitVec::new();
         new_key.extend_from_bitslice(key);
-        PatriciaNode {
+        LoopyPatriciaNode {
             left_child: None,
             right_child: None,
             end,
@@ -25,78 +25,88 @@ impl PatriciaNode {
 }
 
 #[derive(Debug)]
-pub(crate) struct PatriciaTree {
-    root: PatriciaNode,
+pub(crate) struct LoopyPatriciaTree {
+    root: Option<Box<LoopyPatriciaNode>>,
 }
 
-impl PatriciaTree {
+impl LoopyPatriciaTree {
     pub fn new() -> Self {
-        PatriciaTree {
-            root: PatriciaNode::new(&BitVec::new().as_bitslice(), false),
+        LoopyPatriciaTree {
+            root: Some(Box::new(LoopyPatriciaNode::new(&BitVec::new().as_bitslice(), false))),
         }
     }
 
-    pub fn insert(&mut self, key: &BitVec<u8>) {
-        Self::find_and_insert(&mut self.root, key);
-    }
+    pub fn insert(&mut self, org_key: &BitVec<u8>) {
+        let mut node =  self.root.as_mut().unwrap();
+        let mut key : BitVec<u8> = BitVec::new();
+        key.extend_from_bitslice(org_key);
 
-    fn find_and_insert(node: &mut PatriciaNode, key: &BitVec<u8>) {
-        let i = Self::find_number_of_matching_bits(&node.key, &key);
+        loop{
+            let i = Self::find_number_of_matching_bits(&node.key, &key);
+            let mut split : BitVec<u8> = BitVec::new();
+            split.extend_from_bitslice(&key);
+            let (base_segment, new_segment) = split.split_at(i);
+            let (_, old_segment) = node.key.split_at(i);
 
-        let (base_segment, new_segment) = key.split_at(i);
-        let (_, old_segment) = node.key.split_at(i);
-
-        if i == key.len() {
-            if i!= 0 && i != node.key.len() {
-                let mut new_child = PatriciaNode::new(&old_segment.to_bitvec(), node.end);
-                swap(&mut new_child.left_child, &mut node.left_child);
-                swap(&mut new_child.right_child, &mut node.right_child);
-                if old_segment[0] {
-                    node.right_child = Some(Box::new(new_child));
-                } else {
-                    node.left_child = Some(Box::new(new_child));
+            if i == key.len() {
+                if i!= 0 && i != node.key.len() {
+                    let mut new_child = LoopyPatriciaNode::new(&old_segment.to_bitvec(), node.end);
+                    swap(&mut new_child.left_child, &mut node.left_child);
+                    swap(&mut new_child.right_child, &mut node.right_child);
+                    if old_segment[0] {
+                        node.right_child = Some(Box::new(new_child));
+                    } else {
+                        node.left_child = Some(Box::new(new_child));
+                    }
+                    node.key.clear();
+                    node.key.extend_from_bitslice(base_segment);
+                    node.end = true;
                 }
+                return;
+            }
+            if i == node.key.len() {
+                if key[i] {
+                    if node.right_child.is_some() {
+                        node = node.right_child.as_mut().unwrap();
+                        key.clear();
+                        key.extend_from_bitslice(new_segment);
+                        continue;
+                    } else {
+                        node.right_child = Some(Box::new(LoopyPatriciaNode::new(&new_segment.to_bitvec(), true)));
+                    }
+                } else {
+                    if node.left_child.is_some() {
+                        node = node.left_child.as_mut().unwrap();
+                        key.clear();
+                        key.extend_from_bitslice(new_segment);
+                        continue;
+                    } else {
+                        node.left_child = Some(Box::new(LoopyPatriciaNode::new(&new_segment.to_bitvec(), true)));
+                    }
+                    return;
+                }
+            } else {
+                let mut new_right_node;
+                let mut new_left_node;
+
+                if key[i] == false {
+                    new_left_node = LoopyPatriciaNode::new(&new_segment.to_bitvec(), true);
+                    new_right_node = LoopyPatriciaNode::new(&old_segment.to_bitvec(), node.end);
+                    swap(&mut new_right_node.left_child, &mut node.left_child);
+                    swap(&mut new_right_node.right_child, &mut node.right_child);
+                } else {
+                    new_left_node = LoopyPatriciaNode::new(&old_segment.to_bitvec(), node.end);
+                    swap(&mut new_left_node.left_child, &mut node.left_child);
+                    swap(&mut new_left_node.right_child, &mut node.right_child);
+                    new_right_node = LoopyPatriciaNode::new(&new_segment.to_bitvec(), true);
+                }
+                node.right_child = Some(Box::new(new_right_node));
+                node.left_child = Some(Box::new(new_left_node));
                 node.key.clear();
                 node.key.extend_from_bitslice(base_segment);
-                node.end = true;
+                node.end = false;
             }
             return;
-        }
-
-        if i == node.key.len() {
-            if key[i] {
-                if node.right_child.is_some() {
-                    Self::find_and_insert(node.right_child.as_mut().unwrap(), &new_segment.to_bitvec());
-                } else {
-                    node.right_child = Some(Box::new(PatriciaNode::new(&new_segment.to_bitvec(), true)));
-                }
-            } else {
-                if node.left_child.is_some() {
-                    Self::find_and_insert(node.left_child.as_mut().unwrap(), &new_segment.to_bitvec());
-                } else {
-                    node.left_child = Some(Box::new(PatriciaNode::new(&new_segment.to_bitvec(), true)));
-                }
-            }
-        } else {
-            let mut new_right_node;
-            let mut new_left_node;
-
-            if key[i] == false {
-                new_left_node = PatriciaNode::new(&new_segment.to_bitvec(), true);
-                new_right_node = PatriciaNode::new(&old_segment.to_bitvec(), node.end);
-                swap(&mut new_right_node.left_child, &mut node.left_child);
-                swap(&mut new_right_node.right_child, &mut node.right_child);
-            } else {
-                new_left_node = PatriciaNode::new(&old_segment.to_bitvec(), node.end);
-                swap(&mut new_left_node.left_child, &mut node.left_child);
-                swap(&mut new_left_node.right_child, &mut node.right_child);
-                new_right_node = PatriciaNode::new(&new_segment.to_bitvec(), true);
-            }
-            node.right_child = Some(Box::new(new_right_node));
-            node.left_child = Some(Box::new(new_left_node));
-            node.key.clear();
-            node.key.extend_from_bitslice(base_segment);
-            node.end = false;
         }
     }
 
@@ -110,32 +120,37 @@ impl PatriciaTree {
         return length;
     }
 
-    // Search for a key in the tree
-    pub fn search(&self, key: &BitVec<u8>) -> bool {
-        Self::search_internal(&self.root, key)
-    }
-
-    // Search for a key in the tree
-    fn search_internal(node: &PatriciaNode, key: &BitVec<u8>) -> bool {
-        let i = Self::find_number_of_matching_bits(&node.key, key);
-        if i == key.len() {
-            return node.end
-        }
-
-        let (_, right) = key.split_at(i);
-
-
-
-        if right[0] == true {
-            if node.right_child.is_none() {
-                return false;
+    pub fn search(&self, org_key: &BitVec<u8>) -> bool {
+        let mut node =  self.root.as_ref().unwrap();
+        let mut key : BitVec<u8> = BitVec::new();
+        key.extend_from_bitslice(org_key);
+        loop {
+            let i = Self::find_number_of_matching_bits(&node.key, &key);
+            if i == key.len() {
+                return node.end
             }
-            Self::search_internal(node.right_child.as_ref().unwrap(), &right.to_bitvec())
-        } else {
-            if node.left_child.is_none() {
-                return false;
+
+            let mut split : BitVec<u8> = BitVec::new();
+            split.extend_from_bitslice(&key);
+            let (_, right) = split.split_at(i);
+
+
+            if right[0] == true {
+                if node.right_child.is_none() {
+                    return false;
+                }
+                node = node.right_child.as_ref().unwrap();
+                key = BitVec::new();
+                key.extend_from_bitslice(right);
+                continue;
+            } else {
+                if node.left_child.is_none() {
+                    return false;
+                }
+                node = node.left_child.as_ref().unwrap();
+                key = BitVec::new();
+                key.extend_from_bitslice(right);
             }
-            Self::search_internal(node.left_child.as_ref().unwrap(), &right.to_bitvec())
         }
     }
 
@@ -154,7 +169,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         const SIZE : usize = 4096;
-        let mut p = crate::collections::patricia::PatriciaTree::new();
+        let mut p = crate::collections::loopy_patricia::LoopyPatriciaTree::new();
         let mut vector = Vec::new();
 
         for _i in 0..100 {
@@ -252,7 +267,7 @@ mod tests {
     //     assert!(!p.search(&b14));
     // }
 
-    fn dfs(p: &PatriciaNode, s: &str) {
+    fn dfs(p: &LoopyPatriciaNode, s: &str) {
         let text = format!("{}-{}{}",s, p.key, if p.end {"+(end)"} else { "" });
         if p.left_child.is_some() {
             dfs(p.left_child.as_ref().unwrap(), text.as_str());

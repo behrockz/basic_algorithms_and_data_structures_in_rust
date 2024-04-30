@@ -1,3 +1,4 @@
 pub mod linked_list;
 pub mod doubly_linked_list;
-mod patricia;
+pub(crate) mod patricia;
+mod loopy_patricia;
