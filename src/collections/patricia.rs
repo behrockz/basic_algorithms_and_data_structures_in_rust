@@ -1,18 +1,20 @@
 use bitvec::prelude::*;
 use std::mem::swap;
-use rand::prelude::*;
 
+
+type Key = BitVec<u8, Msb0>;
+type KeySlice = BitSlice<u8, Msb0>;
 
 #[derive(Debug)]
 struct PatriciaNode {
     left_child: Option<Box<PatriciaNode>>,
     right_child: Option<Box<PatriciaNode>>,
-    key: BitVec<u8>,
+    key: Key,
     end: bool
 }
 
 impl PatriciaNode {
-    fn new(key: &BitSlice<u8>, end: bool) -> Self {
+    fn new(key: &KeySlice, end: bool) -> Self {
         let mut new_key = BitVec::new();
         new_key.extend_from_bitslice(key);
         PatriciaNode {
@@ -36,11 +38,11 @@ impl PatriciaTree {
         }
     }
 
-    pub fn insert(&mut self, key: &BitVec<u8>) {
+    pub fn insert(&mut self, key: &Key) {
         Self::find_and_insert(&mut self.root, key);
     }
 
-    fn find_and_insert(node: &mut PatriciaNode, key: &BitVec<u8>) {
+    fn find_and_insert(node: &mut PatriciaNode, key: &Key) {
         let i = Self::find_number_of_matching_bits(&node.key, &key);
 
         let (base_segment, new_segment) = key.split_at(i);
@@ -56,8 +58,7 @@ impl PatriciaTree {
                 } else {
                     node.left_child = Some(Box::new(new_child));
                 }
-                node.key.clear();
-                node.key.extend_from_bitslice(base_segment);
+                node.key.truncate(i);
                 node.end = true;
             }
             return;
@@ -100,7 +101,7 @@ impl PatriciaTree {
         }
     }
 
-    fn find_number_of_matching_bits(src: &BitVec<u8>, dest: &BitVec<u8>) -> usize {
+    fn find_number_of_matching_bits(src: &Key, dest: &Key) -> usize {
         let length = src.len().min(dest.len());
         for i in 0..length {
             if src[i] != dest[i] {
@@ -111,12 +112,12 @@ impl PatriciaTree {
     }
 
     // Search for a key in the tree
-    pub fn search(&self, key: &BitVec<u8>) -> bool {
+    pub fn search(&self, key: &Key) -> bool {
         Self::search_internal(&self.root, key)
     }
 
     // Search for a key in the tree
-    fn search_internal(node: &PatriciaNode, key: &BitVec<u8>) -> bool {
+    fn search_internal(node: &PatriciaNode, key: &Key) -> bool {
         let i = Self::find_number_of_matching_bits(&node.key, key);
         if i == key.len() {
             return node.end
@@ -146,6 +147,7 @@ impl PatriciaTree {
 
 #[cfg(test)]
 mod tests {
+    use rand::RngCore;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
@@ -160,9 +162,8 @@ mod tests {
         for _i in 0..100 {
             let mut bytes: [u8; SIZE] = [0u8; SIZE];
             rng.fill_bytes(&mut bytes);
-            let b = bytes.view_bits::<Lsb0>().to_bitvec();
+            let b = bytes.view_bits::<Msb0>().to_bitvec();
             p.insert(&b);
-            assert!(p.search(&b));
             vector.push(b);
         }
 
@@ -173,84 +174,10 @@ mod tests {
         for _i in 0..100 {
             let mut bytes: [u8; SIZE] = [0u8; SIZE];
             rng.fill_bytes(&mut bytes);
-            let b = bytes.view_bits::<Lsb0>().to_bitvec();
+            let b = bytes.view_bits::<Msb0>().to_bitvec();
             assert!(!p.search(&b));
         }
     }
-
-    // #[test]
-    // fn add_test() {
-    //     let mut p = PatriciaTree::new();
-    //
-    //     let b1: BitVec<u8> = bitvec![0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8, 0u8].bits;
-    //     p.insert(&b1);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b2: BitVec<u8>  = bitvec![0, 0, 0, 0, 1, 0, 0, 0];
-    //     p.insert(&b2);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b3: BitVec<u8>  = bitvec![0, 0, 0, 0, 0, 1, 0, 0];
-    //     p.insert(&b3);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b4: BitVec<u8>  = bitvec![0, 0, 0, 0, 0, 1, 1, 1];
-    //     p.insert(&b4);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b5: BitVec<u8>  = bitvec![0, 0, 0, 0, 0, 0, 0, 1];
-    //     p.insert(&b5);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b6: BitVec<u8>  = bitvec![0, 0, 0, 0, 1];
-    //     p.insert(&b6);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b7: BitVec<u8>  = bitvec![0, 0, 0, 0, 1, 0, 1, 0];
-    //     p.insert(&b7);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b8: BitVec<u8>  = bitvec![0, 0, 0, 0, 1, 1, 0, 0];
-    //     p.insert(&b8);
-    //     println!("--------wrong---------");
-    //     dfs(&p.root, "");
-    //
-    //     let b9: BitVec<u8>  = bitvec![0, 0, 0, 0, 0, 0, 1, 1];
-    //     p.insert(&b9);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     let b10: BitVec<u8>  = bitvec![0, 0, 0, 0, 1, 1, 1, 1];
-    //     p.insert(&b10);
-    //     println!("-----------------");
-    //     dfs(&p.root, "");
-    //
-    //     assert!(p.search(&b1));
-    //     assert!(p.search(&b2));
-    //     assert!(p.search(&b3));
-    //     assert!(p.search(&b4));
-    //     assert!(p.search(&b5));
-    //     assert!(p.search(&b6));
-    //     assert!(p.search(&b7));
-    //     assert!(p.search(&b8));
-    //     assert!(p.search(&b9));
-    //     assert!(p.search(&b10));
-    //     let b11: BitVec<u8>  = bitvec![1, 0, 0, 0, 1, 1, 1, 1];
-    //     assert!(!p.search(&b11));
-    //     let b12: BitVec<u8>  = bitvec![0, 0, 0, 0, 1, 1, 1, 0];
-    //     assert!(!p.search(&b12));
-    //     let b13: BitVec<u8>  = bitvec![0, 0, 0, 0, 1, 0, 1, 1];
-    //     assert!(!p.search(&b13));
-    //     let b14: BitVec<u8>  = bitvec![0, 0, 0, 0, 0, 0];
-    //     assert!(!p.search(&b14));
-    // }
 
     fn dfs(p: &PatriciaNode, s: &str) {
         let text = format!("{}-{}{}",s, p.key, if p.end {"+(end)"} else { "" });

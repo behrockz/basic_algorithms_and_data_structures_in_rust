@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 yield-return = "0.1.0"
 rand = "0.9.0-alpha.1"
+cargo-instruments = "0.4.9"
 
 [dependencies.bitvec]
 version = "1"
